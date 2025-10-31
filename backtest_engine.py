@@ -51,7 +51,6 @@ class BacktestEngine:
             print("Position still open at end of backtest.")
             print(f"Closing at last price ${last_price:.2f} for P/L of ${profit:.2f}")
 
-        print(f"Initial Capital: ${self.initial_capital:.2f}")
         print(f"Final Capital:   ${final_capital:.2f}")
         
         total_return = ((final_capital - 100000) / 100000) * 100
