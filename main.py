@@ -5,8 +5,7 @@ from trading_strategy import MovingAverageStrategy
 from backtest_engine import BacktestEngine
 
 if __name__ == "__main__":
-    # Try a more volatile stock that likely had crossovers
-    spy = Stock("AAPL", "2022-01-01", "2023-01-01")  # SPY during 2022 bear market
+    spy = Stock("AAPL", "2020-01-01", "2023-01-01")
     d20_ma = MovingAverageStrategy(spy)
 
     backtest = BacktestEngine(d20_ma)
