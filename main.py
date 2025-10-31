@@ -1,5 +1,3 @@
-import pandas as pd
-
 from stock import Stock
 from trading_strategy import MovingAverageStrategy
 from backtest_engine import BacktestEngine
