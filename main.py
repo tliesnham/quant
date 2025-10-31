@@ -8,3 +8,4 @@ if __name__ == "__main__":
 
     backtest = BacktestEngine(d20_ma)
     backtest.run_backtest()
+    print(f"Final capital: ${backtest.initial_capital:.2f}")
