@@ -45,7 +45,7 @@ class BacktestEngine:
         final_capital = self.initial_capital
         # If a position is still open at the end, calculate its current value
         if self.position_open:
-            last_price = self.strategy.stock.data['Close'][-1]
+            last_price = self.strategy.stock.data['Close'].iloc[-1]
             profit = self.calculate_delta(self.position_price, last_price)
             final_capital += self.position_size + profit
             print("Position still open at end of backtest.")
