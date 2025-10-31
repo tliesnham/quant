@@ -19,9 +19,8 @@ class MovingAverageStrategy(TradingStrategy):
 
         for day in data.itertuples():
             signal = 0
-            # You must now reference the new, full column names
-            if day.SMA_20 > day.Close: # <-- Renamed columns
-                signal = -1  # Sell signal
+            if day.SMA_20 > day.Close:
+                signal = -1
             elif day.SMA_20 < day.Close:
-                signal = 1   # Buy signal
+                signal = 1
             yield (day.Index, signal)

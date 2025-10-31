@@ -9,7 +9,6 @@ class BacktestEngine:
     def run_backtest(self):
         signal_generator = self.strategy.generate_signals()
         for date, signal in signal_generator:
-            # Here you would implement the logic to execute trades based on signals
             if signal == 1:  # Buy signal
                 print(f"{date.date()}: Buy signal received.")
                 self.position_open = True
