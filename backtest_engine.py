@@ -1,10 +1,13 @@
+from slippage import SlippageModel
+
 class BacktestEngine:
-    def __init__(self, assets, strategy, initial_capital=100000, position_size=1000):
+    def __init__(self, assets, strategy, initial_capital=100000, position_size=1000, slippage_model: SlippageModel = None):
         self.assets = assets
         self.strategy = strategy
         self.initial_capital = initial_capital
         self.peak_capital = initial_capital
         self.position_size = position_size
+        self.slippage_model = slippage_model
 
         # Calculate the capital allocated to each asset
         self.position_size_per_asset = self.position_size / len(self.assets)
@@ -17,31 +20,43 @@ class BacktestEngine:
     def run_backtest(self):
         print(f"--- Running Backtest for Assets: {[asset.symbol for asset in self.assets]} ---")
         print(f"--- Position Size Per Asset: ${self.position_size_per_asset:.2f} ---")
+        if self.slippage_model:
+            print(f"--- Slippage Model Applied: {self.slippage_model.__class__.__name__} ---")
         
         signal_generator = self.strategy.generate_signals()
         
         for date, signal in signal_generator:
             if signal == 1:  # Buy signal
-                # Check for sufficient total capital before entering new positions
                 if self.initial_capital < self.position_size:
                     print(f"[{date}] Insufficient capital to open full position. Skipping buy signal.")
                     continue
 
                 for asset in self.assets:
                     if not self.positions[asset.symbol]['open']:
-                        current_price = asset.data.loc[date, 'Close']
+                        signal_price = asset.data.loc[date, 'Close']
+                        
+                        # Apply slippage model to get execution price
+                        execution_price = signal_price
+                        if self.slippage_model:
+                            execution_price = self.slippage_model.get_execution_price(signal_price, 1, asset.data.loc[date])
+
                         self.positions[asset.symbol]['open'] = True
-                        self.positions[asset.symbol]['price'] = current_price
+                        self.positions[asset.symbol]['price'] = execution_price
                         self.initial_capital -= self.position_size_per_asset
-                        print(f"[{date}] BUY {asset.symbol} at ${current_price:.2f}. Capital: ${self.initial_capital:.2f}")
+                        print(f"[{date}] BUY {asset.symbol} at ${execution_price:.2f} (Signal Price: ${signal_price:.2f}). Capital: ${self.initial_capital:.2f}")
 
             elif signal == -1:  # Sell signal
                 for asset in self.assets:
                     if self.positions[asset.symbol]['open']:
-                        current_price = asset.data.loc[date, 'Close']
+                        signal_price = asset.data.loc[date, 'Close']
                         buy_price = self.positions[asset.symbol]['price']
 
-                        profit = self.calculate_delta(buy_price, current_price, self.position_size_per_asset)
+                        # Apply slippage model to get execution price
+                        execution_price = signal_price
+                        if self.slippage_model:
+                            execution_price = self.slippage_model.get_execution_price(signal_price, -1, asset.data.loc[date])
+
+                        profit = self.calculate_delta(buy_price, execution_price, self.position_size_per_asset)
                         self.initial_capital += self.position_size_per_asset + profit
 
                         # Update peak capital and calculate drawdown
@@ -49,7 +64,7 @@ class BacktestEngine:
                         drawdown = self.initial_capital - self.peak_capital
                         self.max_drawdown = min(self.max_drawdown, drawdown)
                         
-                        print(f"[{date}] SELL {asset.symbol} at ${current_price:.2f}. P/L: ${profit:.2f}. Capital: ${self.initial_capital:.2f}")
+                        print(f"[{date}] SELL {asset.symbol} at ${execution_price:.2f} (Signal Price: ${signal_price:.2f}). P/L: ${profit:.2f}. Capital: ${self.initial_capital:.2f}")
 
                         # Reset position state
                         self.positions[asset.symbol]['open'] = False
