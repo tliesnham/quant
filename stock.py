@@ -15,6 +15,7 @@ class Stock:
         # Add technical indicators
         self._add_technical_indicators()
 
+        # Flatten MultiIndex columns if present and rename Close column
         self._flatten_columns_and_rename()
 
     def _flatten_columns_and_rename(self):

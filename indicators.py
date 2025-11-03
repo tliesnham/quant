@@ -12,8 +12,8 @@ class Indicator(ABC):
 
 class SMAIndicator(Indicator):
     def __init__(self, period: int):
-        super().__init__(f"SMA_{period}")
+        super().__init__("SMA")
         self.period = period
 
     def calculate(self, data: pd.DataFrame) -> Dict[str, pd.Series]:
-        return {f"SMA_{self.period}": data['Close'].rolling(window=self.period).mean()}
+        return {"SMA": data['Close'].rolling(window=self.period).mean()}
