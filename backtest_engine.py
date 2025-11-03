@@ -10,12 +10,12 @@ class BacktestEngine:
         self.position_size_per_asset = self.position_size / len(self.assets)
 
         # Manages the state and entry price for each asset
-        self.positions = {asset.ticker: {'open': False, 'price': 0} for asset in self.assets}
+        self.positions = {asset.symbol: {'open': False, 'price': 0} for asset in self.assets}
         
         self.max_drawdown = 0
 
     def run_backtest(self):
-        print(f"--- Running Backtest for Assets: {[asset.ticker for asset in self.assets]} ---")
+        print(f"--- Running Backtest for Assets: {[asset.symbol for asset in self.assets]} ---")
         print(f"--- Position Size Per Asset: ${self.position_size_per_asset:.2f} ---")
         
         signal_generator = self.strategy.generate_signals()
@@ -28,19 +28,19 @@ class BacktestEngine:
                     continue
 
                 for asset in self.assets:
-                    if not self.positions[asset.ticker]['open']:
+                    if not self.positions[asset.symbol]['open']:
                         current_price = asset.data.loc[date, 'Close']
-                        self.positions[asset.ticker]['open'] = True
-                        self.positions[asset.ticker]['price'] = current_price
+                        self.positions[asset.symbol]['open'] = True
+                        self.positions[asset.symbol]['price'] = current_price
                         self.initial_capital -= self.position_size_per_asset
-                        print(f"[{date}] BUY {asset.ticker} at ${current_price:.2f}. Capital: ${self.initial_capital:.2f}")
+                        print(f"[{date}] BUY {asset.symbol} at ${current_price:.2f}. Capital: ${self.initial_capital:.2f}")
 
             elif signal == -1:  # Sell signal
                 for asset in self.assets:
-                    if self.positions[asset.ticker]['open']:
+                    if self.positions[asset.symbol]['open']:
                         current_price = asset.data.loc[date, 'Close']
-                        buy_price = self.positions[asset.ticker]['price']
-                        
+                        buy_price = self.positions[asset.symbol]['price']
+
                         profit = self.calculate_delta(buy_price, current_price, self.position_size_per_asset)
                         self.initial_capital += self.position_size_per_asset + profit
 
@@ -49,23 +49,23 @@ class BacktestEngine:
                         drawdown = self.initial_capital - self.peak_capital
                         self.max_drawdown = min(self.max_drawdown, drawdown)
                         
-                        print(f"[{date}] SELL {asset.ticker} at ${current_price:.2f}. P/L: ${profit:.2f}. Capital: ${self.initial_capital:.2f}")
+                        print(f"[{date}] SELL {asset.symbol} at ${current_price:.2f}. P/L: ${profit:.2f}. Capital: ${self.initial_capital:.2f}")
 
                         # Reset position state
-                        self.positions[asset.ticker]['open'] = False
-                        self.positions[asset.ticker]['price'] = 0
+                        self.positions[asset.symbol]['open'] = False
+                        self.positions[asset.symbol]['price'] = 0
 
         print("\n--- Backtest Finished ---")
         final_capital = self.initial_capital
         
         # Liquidate any open positions at the end of the backtest
         for asset in self.assets:
-            if self.positions[asset.ticker]['open']:
+            if self.positions[asset.symbol]['open']:
                 last_price = asset.data['Close'].iloc[-1]
-                buy_price = self.positions[asset.ticker]['price']
+                buy_price = self.positions[asset.symbol]['price']
                 profit = self.calculate_delta(buy_price, last_price, self.position_size_per_asset)
                 final_capital += self.position_size_per_asset + profit
-                print(f"Closing open {asset.ticker} position at last price ${last_price:.2f} for P/L of ${profit:.2f}")
+                print(f"Closing open {asset.symbol} position at last price ${last_price:.2f} for P/L of ${profit:.2f}")
 
         print(f"\nFinal Capital:   ${final_capital:.2f}")
         print(f"Max Drawdown:    ${self.max_drawdown:.2f}")
