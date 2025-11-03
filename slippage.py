@@ -24,6 +24,11 @@ class ATRBasedSlippage(SlippageModel):
         Adjusts the execution price based on the ATR value for the day.
         For buys, the price is adjusted up. For sells, it's adjusted down.
         """
+        # Check if the required ATR column exists in the data for this asset
+        if self.atr_column_name not in data_row.index:
+            print(f"Notice: Slippage column '{self.atr_column_name}' not found for this asset on this date. No slippage will be applied.")
+            return signal_price
+
         atr_value = data_row[self.atr_column_name]
         
         # If ATR is NaN (e.g., at the start of the data), assume no slippage

@@ -19,9 +19,6 @@ if __name__ == "__main__":
     spy_atr_14 = ATRIndicator(period=14)
     spy.add_indicator(spy_atr_14)
 
-    tlt_atr_14 = ATRIndicator(period=14)
-    tlt.add_indicator(tlt_atr_14)
-
     # Create the ATR-based slippage model
     atr_slippage = ATRBasedSlippage(atr_column_name=spy_atr_14.column_name, slippage_factor=0.5)
 
