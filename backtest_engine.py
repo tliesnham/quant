@@ -1,4 +1,9 @@
+import logging
+
 from slippage import SlippageModel
+
+logging.basicConfig(filename="trades.log", level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class BacktestEngine:
     def __init__(self, assets, strategy, initial_capital=100000, position_size=1000, slippage_model: SlippageModel = None):
@@ -28,7 +33,7 @@ class BacktestEngine:
         for date, signal in signal_generator:
             if signal == 1:  # Buy signal
                 if self.initial_capital < self.position_size:
-                    print(f"[{date}] Insufficient capital to open full position. Skipping buy signal.")
+                    logger.info(f"[{date}] Insufficient capital to open full position. Skipping buy signal.")
                     continue
 
                 for asset in self.assets:
@@ -43,7 +48,7 @@ class BacktestEngine:
                         self.positions[asset.symbol]['open'] = True
                         self.positions[asset.symbol]['price'] = execution_price
                         self.initial_capital -= self.position_size_per_asset
-                        print(f"[{date}] BUY {asset.symbol} at ${execution_price:.2f} (Signal Price: ${signal_price:.2f}). Capital: ${self.initial_capital:.2f}")
+                        logger.info(f"[{date}] BUY {asset.symbol} at ${execution_price:.2f} (Signal Price: ${signal_price:.2f}). Capital: ${self.initial_capital:.2f}")
 
             elif signal == -1:  # Sell signal
                 for asset in self.assets:
@@ -64,7 +69,7 @@ class BacktestEngine:
                         drawdown = self.initial_capital - self.peak_capital
                         self.max_drawdown = min(self.max_drawdown, drawdown)
                         
-                        print(f"[{date}] SELL {asset.symbol} at ${execution_price:.2f} (Signal Price: ${signal_price:.2f}). P/L: ${profit:.2f}. Capital: ${self.initial_capital:.2f}")
+                        logger.info(f"[{date}] SELL {asset.symbol} at ${execution_price:.2f} (Signal Price: ${signal_price:.2f}). P/L: ${profit:.2f}. Capital: ${self.initial_capital:.2f}")
 
                         # Reset position state
                         self.positions[asset.symbol]['open'] = False
@@ -80,7 +85,7 @@ class BacktestEngine:
                 buy_price = self.positions[asset.symbol]['price']
                 profit = self.calculate_delta(buy_price, last_price, self.position_size_per_asset)
                 final_capital += self.position_size_per_asset + profit
-                print(f"Closing open {asset.symbol} position at last price ${last_price:.2f} for P/L of ${profit:.2f}")
+                logger.info(f"Closing open {asset.symbol} position at last price ${last_price:.2f} for P/L of ${profit:.2f}")
 
         print(f"\nFinal Capital:   ${final_capital:.2f}")
         print(f"Max Drawdown:    ${self.max_drawdown:.2f}")
