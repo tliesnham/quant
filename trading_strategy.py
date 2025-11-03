@@ -12,6 +12,15 @@ class TradingStrategy(ABC):
     def generate_signals(self) -> Generator:
         pass
 
+class BuyAndHoldStrategy(TradingStrategy):
+    def __init__(self, stock: Stock):
+        super().__init__(stock)
+        
+    def generate_signals(self) -> Generator:
+        data = self.stock.data
+        for day in data.itertuples():
+            yield (day.Index, 1)  # Always signal to buy
+
 class MovingAverageStrategy(TradingStrategy):
     def __init__(self, stock: Stock, sma_indicator: SMAIndicator):
         super().__init__(stock)

@@ -31,5 +31,3 @@ if __name__ == "__main__":
     # Example pair strategy with the MovingAverageStrategy
     pair_backtest = BacktestEngine([spy, tlt], strategy=spy_ma_strategy, slippage_model=atr_slippage)
     pair_backtest.run_backtest()
-
-    spy.dump()
