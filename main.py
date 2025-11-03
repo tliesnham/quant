@@ -1,6 +1,7 @@
+from data_provider import RiskFreeRateProvider
 from stock import Stock
 from indicators import SMAIndicator, ATRIndicator
-from trading_strategy import MovingAverageStrategy
+from trading_strategy import MovingAverageStrategy, BuyAndHoldStrategy
 from backtest_engine import BacktestEngine
 from slippage import ATRBasedSlippage
 
@@ -10,6 +11,8 @@ if __name__ == "__main__":
 
     spy = Stock("SPY", START_DATE, END_DATE)
     tlt = Stock("TLT", START_DATE, END_DATE)
+
+    rfr = RiskFreeRateProvider(START_DATE, END_DATE)
 
     # Add SMA 20 day indicator to SPY
     spy_sma_20 = SMAIndicator(period=20)
@@ -23,8 +26,12 @@ if __name__ == "__main__":
     atr_slippage = ATRBasedSlippage(atr_column_name=spy_atr_14.column_name, slippage_factor=0.5)
 
     # Create the strategy using the SAME indicator instance
-    spy_ma_strategy = MovingAverageStrategy(spy, sma_indicator=spy_sma_20)
+    #spy_ma_strategy = MovingAverageStrategy(spy, sma_indicator=spy_sma_20)
+
+    spy_hold_strategy = BuyAndHoldStrategy(spy)
+    hold_backtest = BacktestEngine([spy], strategy=spy_hold_strategy, slippage_model=atr_slippage, risk_free_rate=rfr, position_size=100000)
+    hold_backtest.run_backtest()
 
     # Example pair strategy with the MovingAverageStrategy
-    pair_backtest = BacktestEngine([spy, tlt], strategy=spy_ma_strategy, slippage_model=atr_slippage)
-    pair_backtest.run_backtest()
+    #pair_backtest = BacktestEngine([spy, tlt], strategy=spy_ma_strategy, slippage_model=atr_slippage, risk_free_rate=rfr)
+    #pair_backtest.run_backtest()
