@@ -1,88 +1,79 @@
 class BacktestEngine:
-    def __init__(self, strategy, initial_capital=100000, position_size=1000):
+    def __init__(self, assets, strategy, initial_capital=100000, position_size=1000):
+        self.assets = assets
         self.strategy = strategy
         self.initial_capital = initial_capital
-        self.peak_capital = initial_capital  # Track the peak capital for drawdown
+        self.peak_capital = initial_capital
         self.position_size = position_size
 
-        self.position_open = False
-        self.position_price = 0
+        # Calculate the capital allocated to each asset
+        self.position_size_per_asset = self.position_size / len(self.assets)
 
+        # Manages the state and entry price for each asset
+        self.positions = {asset.ticker: {'open': False, 'price': 0} for asset in self.assets}
+        
         self.max_drawdown = 0
 
     def run_backtest(self):
-        print("--- Running Backtest ---")
+        print(f"--- Running Backtest for Assets: {[asset.ticker for asset in self.assets]} ---")
+        print(f"--- Position Size Per Asset: ${self.position_size_per_asset:.2f} ---")
+        
         signal_generator = self.strategy.generate_signals()
         
         for date, signal in signal_generator:
-            # Ensure we have data for the given date
-            if date not in self.strategy.stock.data.index:
-                continue
-
-            current_price = self.strategy.stock.data.loc[date, 'Close']
-
             if signal == 1:  # Buy signal
+                # Check for sufficient total capital before entering new positions
                 if self.initial_capital < self.position_size:
-                    print(f"Insufficient capital to open position on {date}.")
+                    print(f"[{date}] Insufficient capital to open full position. Skipping buy signal.")
                     continue
-                if not self.position_open:
-                    self.position_open = True
-                    self.position_price = current_price
-                    # The cost of the position is the position_size
-                    self.initial_capital -= self.position_size
-                    print(f"[{date}] BUY signal. Opened position at ${current_price:.2f}. Capital: ${self.initial_capital:.2f}")
+
+                for asset in self.assets:
+                    if not self.positions[asset.ticker]['open']:
+                        current_price = asset.data.loc[date, 'Close']
+                        self.positions[asset.ticker]['open'] = True
+                        self.positions[asset.ticker]['price'] = current_price
+                        self.initial_capital -= self.position_size_per_asset
+                        print(f"[{date}] BUY {asset.ticker} at ${current_price:.2f}. Capital: ${self.initial_capital:.2f}")
 
             elif signal == -1:  # Sell signal
-                if self.position_open:
-                    # Calculate profit/loss based on position size and price change
-                    profit = self.calculate_delta(self.position_price, current_price)
-                    
-                    # The return is the original position size plus the profit
-                    self.initial_capital += self.position_size + profit
+                for asset in self.assets:
+                    if self.positions[asset.ticker]['open']:
+                        current_price = asset.data.loc[date, 'Close']
+                        buy_price = self.positions[asset.ticker]['price']
+                        
+                        profit = self.calculate_delta(buy_price, current_price, self.position_size_per_asset)
+                        self.initial_capital += self.position_size_per_asset + profit
 
-                    # Update peak capital and calculate drawdown
-                    self.peak_capital = max(self.peak_capital, self.initial_capital)
-                    drawdown = self.initial_capital - self.peak_capital
-                    self.max_drawdown = min(self.max_drawdown, drawdown)
-                    
-                    print(f"[{date}] SELL signal. Closed position at ${current_price:.2f}. P/L: ${profit:.2f}. Capital: ${self.initial_capital:.2f}")
-                    self.position_open = False
-                    self.position_price = 0
+                        # Update peak capital and calculate drawdown
+                        self.peak_capital = max(self.peak_capital, self.initial_capital)
+                        drawdown = self.initial_capital - self.peak_capital
+                        self.max_drawdown = min(self.max_drawdown, drawdown)
+                        
+                        print(f"[{date}] SELL {asset.ticker} at ${current_price:.2f}. P/L: ${profit:.2f}. Capital: ${self.initial_capital:.2f}")
+
+                        # Reset position state
+                        self.positions[asset.ticker]['open'] = False
+                        self.positions[asset.ticker]['price'] = 0
 
         print("\n--- Backtest Finished ---")
         final_capital = self.initial_capital
-        # If a position is still open at the end, calculate its current value
-        if self.position_open:
-            last_price = self.strategy.stock.data['Close'].iloc[-1]
-            profit = self.calculate_delta(self.position_price, last_price)
-            final_capital += self.position_size + profit
-            print("Position still open at end of backtest.")
-            print(f"Closing at last price ${last_price:.2f} for P/L of ${profit:.2f}")
+        
+        # Liquidate any open positions at the end of the backtest
+        for asset in self.assets:
+            if self.positions[asset.ticker]['open']:
+                last_price = asset.data['Close'].iloc[-1]
+                buy_price = self.positions[asset.ticker]['price']
+                profit = self.calculate_delta(buy_price, last_price, self.position_size_per_asset)
+                final_capital += self.position_size_per_asset + profit
+                print(f"Closing open {asset.ticker} position at last price ${last_price:.2f} for P/L of ${profit:.2f}")
 
-        print(f"Final Capital:   ${final_capital:.2f}")
-
-        print(f"Max Drawdown:   ${self.max_drawdown:.2f}")
+        print(f"\nFinal Capital:   ${final_capital:.2f}")
+        print(f"Max Drawdown:    ${self.max_drawdown:.2f}")
         
         total_return = ((final_capital - 100000) / 100000) * 100
         print(f"Total Return:    {total_return:.2f}%")
 
-    def calculate_delta(self, price_buy, price_sell):
-        # This should calculate the actual profit based on the number of shares
-        num_shares = self.position_size / price_buy
+    def calculate_delta(self, price_buy, price_sell, position_size):
+        # Calculates profit based on the number of shares for a given position size
+        num_shares = position_size / price_buy
         return (price_sell - price_buy) * num_shares
-    
-class PairBacktestEngine(BacktestEngine):
-    def __init__(self, strategy, initial_capital=100000, position_size=1000):
-        # The strategy for a pair trade will need to reference two stocks
-        super().__init__(strategy, initial_capital, position_size)
-
-    def run_backtest(self):
-        # This method will be overridden to handle two assets
-        print("--- Running PAIR Backtest (Not Implemented) ---")
-        # TODO: Implement logic to buy/sell two stocks at once,
-        # split position size, and track P/L for the pair.
-        pass
-
-    def calculate_delta(self, price_buy, price_sell):
-        # This can be reused if we calculate delta per leg
-        return super().calculate_delta(price_buy, price_sell)
