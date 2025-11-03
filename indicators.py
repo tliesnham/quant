@@ -3,8 +3,11 @@ import pandas as pd
 from typing import Dict
 
 class Indicator(ABC):
-    def __init__(self, name: str):
-        self.name = name
+    @property
+    @abstractmethod
+    def column_name(self) -> str:
+        """The name of the column this indicator will generate."""
+        pass
 
     @abstractmethod
     def calculate(self, data: pd.DataFrame) -> Dict[str, pd.Series]:
@@ -12,8 +15,12 @@ class Indicator(ABC):
 
 class SMAIndicator(Indicator):
     def __init__(self, period: int):
-        super().__init__("SMA")
         self.period = period
+        self._column_name = f"SMA_{self.period}"
+
+    @property
+    def column_name(self) -> str:
+        return self._column_name
 
     def calculate(self, data: pd.DataFrame) -> Dict[str, pd.Series]:
-        return {"SMA": data['Close'].rolling(window=self.period).mean()}
+        return {self.column_name: data['Close'].rolling(window=self.period).mean()}
